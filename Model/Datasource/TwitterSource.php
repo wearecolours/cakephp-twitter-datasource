@@ -233,14 +233,22 @@ class TwitterSource extends DataSource {
 	protected function _request($type, $url, $params = array()) {
 		switch ($type) {
 		case 'GET':
+			// Prepare prerequisites
 			$accessToken = $params['access_token'];
+			$q = rawurlencode($params['q']);
+
+			// Unset from rest of the params
 			unset($params['access_token']);
-
-			$url = sprintf($url . '?%s', http_build_query($params));
-			$this->log($url, LOG_DEBUG);
+			unset($params['q']);
 			
+			// Generate URL for cURL
+			$url = sprintf($url . '?q=%s&%s', $q, http_build_query($params));
+			
+			// Initialize cURL
+			$this->log($url, LOG_DEBUG);
 			$curl = curl_init($url);
-
+			
+			// Set cURL options
 			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($curl, CURLINFO_HEADER_OUT, true);
 			curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -249,7 +257,10 @@ class TwitterSource extends DataSource {
 				'Accept-Encoding: gzip'
 			));
 
+			// Execute
 			$response = json_decode(gzdecode(curl_exec($curl)));			
+			
+			// close
 			curl_close($curl);
 			break;
 		case 'DELETE':
