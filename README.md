@@ -1,6 +1,6 @@
 # Twitter Datasource
 
-Provides a Datasource for connecting to the Twitter API's Search endpoint. As of now the datasource is read-only.
+Provides a Datasource for connecting to the Twitter API. As of now the datasource is read-only.
 
 ## Installation
 
@@ -17,7 +17,7 @@ git clone git@github.com:nodesagency/cakephp-twitter-datasource.git app/Plugin/T
 
 Or add it as a submodule to your pre-existing git repository.
 ```
-git submodule add git://github.com/nodesagency/cakephp-twitter-datasource.git app/Plugin/TwitterDatasource
+git submodule add git@github.com/nodesagency/cakephp-twitter-datasource.git app/Plugin/TwitterDatasource
 ```
 
 ### 2. Add the plugin to your project
@@ -58,13 +58,14 @@ ConnectionManager::create('tweets', array(
 
 ## Usage
 
-The data source attempts to wrap the [Twitter API Search endpoints](https://dev.twitter.com/docs/api/1.1/get/search/tweets) to CakePHP-style models so you can use the ```find()```, ```save()``` and ```delete()``` methods as you normally would. However, the endpoints don't handle the usual parameters (limit, order, etc) so each model acts independendtly.
+The data source attempts to wrap the [Twitter API](https://dev.twitter.com/docs/api/1.1/) to CakePHP-style models so you can use the ```find()```, ```save()``` and ```delete()``` methods as you normally would. However, the endpoints don't handle the usual parameters (limit, order, etc) so each model acts independendtly.
 
 ### Tweet
 
-The Tweet model is a wrapper for the search endpoints, providing access to tweets on Twitter. Calling ```find()``` on this model uses the [/searsh/tweets](https://dev.twitter.com/docs/api/1.1/get/search/tweets) action.
+The Tweet model is a wrapper for the given endpoints, providing access to tweets on Twitter. Calling ```find()``` on this model uses the [/search/tweets](https://dev.twitter.com/docs/api/1.1/get/search/tweets) action as default. It is possbile to access other endpoint on using ```resource``` as parameter.
 
 #### Examples
+
 
 ```php
 // Get tweets with a specific hashtag
@@ -76,6 +77,17 @@ $tweets = $this->Tweet->find(
 		'conditions' => array(
 			'q' => $hashtag
 		)
+	)
+);
+
+// Get latest tweets of the user 'twitter'
+$tweets = $this->Tweet->find(
+	'all',
+	array(
+		'conditions' => array(
+			'screen_name' => 'twitter'
+		),
+		'resource' => 'statuses/user_timeline'
 	)
 );
 ```
