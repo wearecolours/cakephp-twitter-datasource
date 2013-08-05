@@ -17,7 +17,7 @@ git clone git@github.com:nodesagency/cakephp-twitter-datasource.git app/Plugin/T
 
 Or add it as a submodule to your pre-existing git repository.
 ```
-git submodule add git@github.com/nodesagency/cakephp-twitter-datasource.git app/Plugin/TwitterDatasource
+git submodule add git@github.com:nodesagency/cakephp-twitter-datasource.git app/Plugin/TwitterDatasource
 ```
 
 ### 2. Add the plugin to your project
