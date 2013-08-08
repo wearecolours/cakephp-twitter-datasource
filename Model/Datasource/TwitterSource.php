@@ -21,11 +21,15 @@ class TwitterSource extends DataSource {
  * @var string
  */
 	public $description = 'Twitter API source';
+	protected $_accessToken = null;
+
+	const AUTH_URL = 'https://api.twitter.com/oauth2/token/';
+	const API_URL = 'https://api.twitter.com/1.1/';
 
 /**
  * construct the datasource
  *
- * @param array $config 
+ * @param array $config
  */
 	public function __construct($config) {
 		parent::__construct($config);
@@ -61,6 +65,7 @@ class TwitterSource extends DataSource {
 		$data = array();
 		$limit = !empty($queryData['limit']) ? $queryData['limit'] : 0;
 		$offset = !empty($queryData['offset']) ? $queryData['offset'] : 0;
+		$resource = !empty($queryData['resource']) ? $queryData['resource'] : 'search/tweets';
 
 		switch (get_class($model)) {
 			case 'Tweet':
@@ -73,80 +78,67 @@ class TwitterSource extends DataSource {
 					throw new Exception('Invalid consumer secret.');
 				}
 
-				$conditions = $this->_extractFields($queryData['conditions'], 'Tweet');
+				$conditions = (isset($queryData['conditions'])) ? $this->_extractFields($queryData['conditions'], 'Tweet') : array();
 
-				// setup credentials
-				$consumerKey = $this->config['consumer_key'];
-				$consumerSecret = $this->config['consumer_secret'];
-				
 				// determine API endpoint
-				$tweetsUrl = 'https://api.twitter.com/1.1/search/tweets.json';
-				$authUrl = 'https://api.twitter.com/oauth2/token/';
+				$url = sprintf('%s%s.json', self::API_URL, $resource);
 
 				// Autheticate
-				$authToken = $this->_auth($consumerKey, $consumerSecret, $authUrl);
-
-				// Setup required parameters
-				$requiredParams = array(
-					'access_token' => $authToken
-				);
-
-				// merge all params
-				$allParams = array_merge($requiredParams, $conditions);
+				$this->_auth();
 
 				// Fetch data
-				$data = $this->_request('GET', $tweetsUrl, $allParams);
+				$data = $this->_request('GET', $url, $conditions);
+
+				if (!empty($data->statuses)) {
+					$data = $data->statuses;
+				}
 
 				// Arrange data (cakify)
-				if (!empty($data->statuses)) {
-					$data = $this->_wrapResults($data->statuses, $model->alias);
-
-					$pagination = !empty($data['pagination']) ? $data['pagination'] : null;
-					if (method_exists($model, 'setPagination')) {
-					 	$model->setPagination($pagination);
-					}
-
-					// Apply offset
-					if (!empty($offset)) {
-						if ($offset < count($data)) {
-							$data = array_slice($data, $offset);
-						} else {
-							$queryData['offset'] = $offset - count($data);
-							$data = $this->read($model, $queryData);
-						}
-					}
-
-					// Apply limit
-					if (!empty($limit)) {
-						if ($limit < count($data)) {
-							$data = array_slice($data, 0, $limit);
-						} elseif ($limit > count($data)) {
-							$queryData['limit'] = $limit - count($data);
-
-							if (!empty($pagination['max_tag_id'])) {
-								$queryData['conditions']['max_tag_id'] = $pagination['max_tag_id'];
-							} elseif (!empty($pagination['next_max_tag_id'])) {
-								$queryData['conditions']['max_tag_id'] = $pagination['next_max_tag_id'];
-							} elseif (!empty($pagination['next_max_timestamp'])) {
-								$queryData['conditions']['max_timestamp'] = $pagination['next_max_timestamp'];
-							} elseif (!empty($pagination['next_max_id'])) {
-								$queryData['conditions']['max_id'] = $pagination['next_max_id'];
-							}
-
-							if ((!empty($queryData['conditions']['max_tag_id']) ||
-								!empty($queryData['conditions']['max_timestamp']) ||
-								(
-									!empty($queryData['conditions']['max_id'])) &&
-									is_array($this->read($model, $queryData))
-								)
-							) {
-								$data = array_merge($data, $this->read($model, $queryData));
-							}
-						}
-					}
-				} else {
-					$data = false;
+				$data = $this->_wrapResults($data, $model->alias);
+				$pagination = !empty($data['pagination']) ? $data['pagination'] : null;
+				if (method_exists($model, 'setPagination')) {
+					$model->setPagination($pagination);
 				}
+
+				// Apply offset
+				if (!empty($offset)) {
+					if ($offset < count($data)) {
+						$data = array_slice($data, $offset);
+					} else {
+						$queryData['offset'] = $offset - count($data);
+						$data = $this->read($model, $queryData);
+					}
+				}
+
+				// Apply limit
+				if (!empty($limit)) {
+					if ($limit < count($data)) {
+						$data = array_slice($data, 0, $limit);
+					} elseif ($limit > count($data)) {
+						$queryData['limit'] = $limit - count($data);
+
+						if (!empty($pagination['max_tag_id'])) {
+							$queryData['conditions']['max_tag_id'] = $pagination['max_tag_id'];
+						} elseif (!empty($pagination['next_max_tag_id'])) {
+							$queryData['conditions']['max_tag_id'] = $pagination['next_max_tag_id'];
+						} elseif (!empty($pagination['next_max_timestamp'])) {
+							$queryData['conditions']['max_timestamp'] = $pagination['next_max_timestamp'];
+						} elseif (!empty($pagination['next_max_id'])) {
+							$queryData['conditions']['max_id'] = $pagination['next_max_id'];
+						}
+
+						if ((!empty($queryData['conditions']['max_tag_id']) ||
+							!empty($queryData['conditions']['max_timestamp']) ||
+							(
+								!empty($queryData['conditions']['max_id'])) &&
+								is_array($this->read($model, $queryData))
+							)
+						) {
+							$data = array_merge($data, $this->read($model, $queryData));
+						}
+					}
+				}
+
 
 				break;
 			default:
@@ -232,43 +224,16 @@ class TwitterSource extends DataSource {
  */
 	protected function _request($type, $url, $params = array()) {
 		switch ($type) {
-		case 'GET':
-			// Prepare prerequisites
-			$accessToken = $params['access_token'];
-			$q = rawurlencode($params['q']);
-
-			// Unset from rest of the params
-			unset($params['access_token']);
-			unset($params['q']);
-			
-			// Generate URL for cURL
-			$url = sprintf($url . '?q=%s&%s', $q, http_build_query($params));
-			
-			// Initialize cURL
-			$this->log($url, LOG_DEBUG);
-			$curl = curl_init($url);
-			
-			// Set cURL options
-			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($curl, CURLINFO_HEADER_OUT, true);
-			curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-				'Authorization: Bearer ' . $accessToken,
-				'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
-				'Accept-Encoding: gzip'
-			));
-
-			// Execute
-			$response = json_decode(gzdecode(curl_exec($curl)));			
-			
-			// close
-			curl_close($curl);
-			break;
-		case 'DELETE':
-		case 'POST':
-		case 'PUT':
-			// @todo
-		default:
-			throw new Exception('Unhandled request type: ' . $type);
+			case 'GET':
+				$url = http_build_url($url, array('query' => http_build_query($params)));
+				$response = $this->_curl($url);
+				break;
+			case 'DELETE':
+			case 'POST':
+			case 'PUT':
+				// @todo
+			default:
+				throw new Exception('Unhandled request type: ' . $type);
 		}
 
 		if (!empty($response->errors)) {
@@ -284,54 +249,29 @@ class TwitterSource extends DataSource {
  *
  * POST request
  *
- * @param string $key
- * @param string $secret
- * @param string $url
  * @return string an active auth token
  */
-	protected function _auth($key, $secret, $url) {
+	protected function _auth() {
+		if ($this->_accessToken) {
+			return $this->_accessToken;
+		}
 		// encode our credentials
-		$encodedKey = base64_encode(rawurlencode($key) . ':' . rawurlencode($secret));
-		
+		$encodedKey = base64_encode(rawurlencode($this->config['consumer_key']) . ':' . rawurlencode($this->config['consumer_secret']));
+
 		// defines the body of the request
 		$params = array(
 			'grant_type' => 'client_credentials'
 		);
-		
-		// log our request
-		$this->log($url, LOG_DEBUG);
 
-		// initialize curl
-		$curl = curl_init($url);
-		
-		// set options
-		curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLINFO_HEADER_OUT, true);
-		curl_setopt($curl, CURLOPT_POST, true);
-		curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-			'Authorization: Basic ' . $encodedKey,
-			'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
-			'Content-Length: 29',
-			'Accept-Encoding: gzip'
-		));
-
-		// execute request
-		$response = json_decode(gzdecode(curl_exec($curl)));
-
-		// check response
-		if (!$response) {
-			$this->log(curl_error($curl), LOG_DEBUG);
-			throw new Exception('An error ocurred, and has been logged');
-		}
-
-		// close connection
-		curl_close($curl);
+		$response = $this->_curl(self::AUTH_URL, 'POST', $params, sprintf('Basic %s', $encodedKey));
 
 		// check token type
-		if ($response->token_type !== 'bearer') {
-			throw new Exception('Invalid token type: ' . $response['token_type']);
+		if (!isset($response->token_type) || $response->token_type !== 'bearer') {
+			throw new Exception('Invalid token type');
 		}
+
+		// storing access token
+		$this->_accessToken = $response->access_token;
 
 		return $response->access_token;
 	}
@@ -368,7 +308,41 @@ class TwitterSource extends DataSource {
 		if (is_object($object)) {
 			$object = (array) $object;
 		}
-		
+
 		return array_map(array($this, '_objectToArray'), $object);
+	}
+
+	protected function _curl($url, $type = 'GET', $params = array(), $authentication = false) {
+		// Initialize cURL
+		$curl = curl_init($url);
+
+		if ($type == 'POST') {
+			// set options
+			curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
+			curl_setopt($curl, CURLOPT_POST, true);
+		}
+		if (!$authentication) {
+			$authentication = sprintf("Bearer %s", $this->_auth());
+		}
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLINFO_HEADER_OUT, true);
+		curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+			'Authorization: ' . $authentication,
+			'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
+			'Accept-Encoding: gzip'
+		));
+
+		// Execute
+		$response = json_decode(gzdecode(curl_exec($curl)));
+
+		// check response
+		if (!$response) {
+			$this->log(curl_error($curl), LOG_DEBUG);
+			throw new Exception('An error ocurred, and has been logged');
+		}
+		// close
+		curl_close($curl);
+
+		return $response;
 	}
 }
