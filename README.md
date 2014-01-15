@@ -96,4 +96,4 @@ Basically you should be able to query using all of [these parameters](https://de
 
 ### Authorization
 
-Authorization with the Twitter API requires only a reqistered application using ```consumer_key``` and ```consumer_secret```. You need to have set up the ```consumer_key``` and ```consumer_secret``` in the database configuration (see above) and they must match the ones in your Foursquare applications manager. ```consumer_key``` and ```consumer_secret``` are submitted to the api alongside the request, authorizing it on the fly.
+Authorization with the Twitter API requires only a reqistered application using ```consumer_key``` and ```consumer_secret```. You need to have set up the ```consumer_key``` and ```consumer_secret``` in the database configuration (see above) and they must match the ones in your Twitter applications manager. ```consumer_key``` and ```consumer_secret``` are submitted to the api alongside the request, authorizing it on the fly.
