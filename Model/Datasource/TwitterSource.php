@@ -266,8 +266,6 @@ class TwitterSource extends DataSource {
 			case 'GET':
 				$url = http_build_url($url, array('query' => http_build_query($params)));
 				$response = $this->_curl($url);
-				debug($response);
-				die();
 				break;
 			case 'DELETE':
 			case 'POST':
