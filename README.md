@@ -101,10 +101,15 @@ against all endpoints of the REST Twitter API (1.1). see [Twitter API](https://d
 
 #### Examples
 ```php
+// import the model
 App::uses('TweetApi', 'TwitterDatasource');
+
+// remember to use the model
 public $uses = array(
 	'TwitterDatasource.TweetApi'
 );
+
+// build query and make request
 $screen_name = 'obama';
 $data = $this->TweetApi->find("all",
 	array(
