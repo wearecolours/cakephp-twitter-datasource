@@ -113,7 +113,6 @@ class TwitterSource extends DataSource {
 				$conditions = (isset($queryData['conditions'])) ? $this->_extractFields($queryData['conditions'], 'Tweet') : array();
 
 				// determine API endpoint
-				debug($resource);
 				$url = sprintf('%s%s.json', self::API_URL, $resource);
 
 				// Autheticate
