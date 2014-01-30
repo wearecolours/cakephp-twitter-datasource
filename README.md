@@ -101,7 +101,11 @@ against all endpoints of the REST Twitter API (1.1). see [Twitter API](https://d
 
 #### Examples
 ```php
-$screen_name = 'obama'
+App::uses('TweetApi', 'TwitterDatasource');
+public $uses = array(
+	'TwitterDatasource.TweetApi'
+);
+$screen_name = 'obama';
 $data = $this->TweetApi->find("all",
 	array(
 		'http_method' => 'GET', // specify the method for accessing the endpoint. It has to be UPERCASE!
