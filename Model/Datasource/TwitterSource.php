@@ -458,9 +458,13 @@ class TwitterSource extends DataSource {
 	 * @return base_64 encoded oauth signature
 	 */
 	public static function _generateOauthSignature($baseUrl, $method = "GET", $requestParams, $requestBody, $consumerSecret, $oauthTokenSecret) {
-		if (isset($requestParams)) {
-			$requestBody = array_merge($requestParams, $requestBody);
+		list($key, $value) = explode("=", $requestParams);
+		$queryArray[$key] = $value;
+
+		if (isset($queryArray)) {
+			$requestBody = array_merge($queryArray, $requestBody);
 		}
+
 		ksort($requestBody);
 
 		// prepear the string (encoded)
