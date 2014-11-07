@@ -460,8 +460,16 @@ class TwitterSource extends DataSource {
 	public static function _generateOauthSignature($baseUrl, $method = "GET", $requestParams, $requestBody, $consumerSecret, $oauthTokenSecret) {
 		$queryArray = array();
 		if (isset($requestParams)) {
-			list($key, $value) = explode("=", $requestParams);
-			$queryArray[$key] = $value;
+			if (strpos($requestParams, '&') !== false) {
+				$params = explode("&", $requestParams);
+				foreach ($params as $param) {
+					list($key, $value) = explode("=", $param);
+					$queryArray[$key] = $value;
+				}
+			} else {
+				list($key, $value) = explode("=", $requestParams);
+				$queryArray[$key] = $value;
+			}
 		}
 
 		if (isset($queryArray)) {
