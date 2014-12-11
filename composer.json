@@ -1,0 +1,15 @@
+{
+    "name": "nodesagency/cakephp-twitter-datasource",
+    "type": "cakephp-plugin",
+    "description": "TwitterDatasource is a plugin that provides a Datasource for connecting to the Twitter API.",
+    "keywords": [
+        "cakephp",
+        "twitter"
+    ],
+    "require": {
+        "composer/installers": "*"
+    },
+ 	"extra": {
+        "installer-name": "TwitterDatasource"
+    }
+}
